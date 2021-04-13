@@ -35,12 +35,27 @@ SRC_C += \
 	src/class/usbtmc/usbtmc_device.c \
 	src/class/vendor/vendor_device.c
 
+
+# SCPI-parser
+SRC_C += \
+	lib/libscpi/src/error.c \
+	lib/libscpi/src/expression.c \
+	lib/libscpi/src/fifo.c \
+	lib/libscpi/src/ieee488.c \
+	lib/libscpi/src/lexer.c \
+	lib/libscpi/src/minimal.c \
+	lib/libscpi/src/parser.c \
+	lib/libscpi/src/units.c \
+	lib/libscpi/src/utils.c
+
+
 # TinyUSB stack include
 INC += $(TOP)/src
 
-CFLAGS += $(addprefix -I,$(INC))
+#CFLAGS += $(addprefix -I,$(INC))
+CFLAGS += -Wno-float-equal -Wno-double-promotion -Wno-maybe-uninitialized $(addprefix -I,$(INC))
 
-LDFLAGS += $(CFLAGS) -fshort-enums -Wl,-T,$(TOP)/$(LD_FILE) -Wl,-Map=$@.map -Wl,-cref -Wl,-gc-sections
+LDFLAGS += $(CFLAGS) -fshort-enums -Wl,-T,$(TOP)/$(LD_FILE) -Wl,-Map=$@.map -Wl,-cref -Wl,-gc-sections#, -L/Users/margaret/Github/tinyusb/examples/device/usbtmc/lib/libscpi/obj/shared -L/Users/margaret/Github/tinyusb/examples/device/usbtmc/lib/libscpi/obj/static
 ifneq ($(SKIP_NANOLIB), 1)
 LDFLAGS += -specs=nosys.specs -specs=nano.specs
 endif
@@ -78,6 +93,7 @@ endif
 
 $(BUILD)/$(PROJECT).elf: $(OBJ)
 	@echo LINK $@
+	#@$(CC) -o $@ $(LDFLAGS) $^ -Wl,--start-group $(LIBS) -Wl,--end-group
 	@$(CC) -o $@ $(LDFLAGS) $^ -Wl,--start-group $(LIBS) -Wl,--end-group
 
 $(BUILD)/$(PROJECT).bin: $(BUILD)/$(PROJECT).elf

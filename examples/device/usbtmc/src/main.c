@@ -1,4 +1,4 @@
-/* 
+/*
  * The MIT License (MIT)
  *
  * Copyright (c) 2019 Ha Thach (tinyusb.org)
@@ -30,6 +30,8 @@
 #include "bsp/board.h"
 #include "tusb.h"
 #include "usbtmc_app.h"
+#include "scpi_parser.h"
+
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
 //--------------------------------------------------------------------+
@@ -52,15 +54,33 @@ void led_blinking_task(void);
 /*------------- MAIN -------------*/
 int main(void)
 {
-  board_init();
 
+  // static uint32_t start_ms = 0;
+  static bool led_state = true;
+
+  board_init();
   tusb_init();
+
+
+  board_led_write(led_state);
+  // led_state = 1 - led_state; // toggle
+
+  scpi_init();
 
   while (1)
   {
     tud_task(); // tinyusb device task
-    led_blinking_task();
+    // led_blinking_task();
     usbtmc_app_task_iter();
+
+    // // Blink every interval ms
+    // if ( (board_millis() - start_ms) > blink_interval_ms) { // time has elapsed
+    // //if ( (board_millis() - start_ms) > blink_interval_ms) { // time has elapsed
+    //   start_ms += blink_interval_ms;
+
+    //   board_led_write(led_state);
+    //   led_state = 1 - led_state; // toggle
+    // }
   }
 
   return 0;
