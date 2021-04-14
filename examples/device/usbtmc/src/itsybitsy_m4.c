@@ -2,13 +2,15 @@
 
 #include <stdio.h>
 
+#include "instrument_types.h"
+
 // Taken from Feather M4 Express
 //  NEEDS update for ItsyBitsy  *******
 //
 
 const int32_t channel_count = 16; // Total number of channels
 
-const char * channel_names[] = { // Channel names ** must ** match the board labels
+const char * channel_names[] = { // Channel names **must** match the board labels
 	"D5",  // PA16 -  1
 	"SCK", // PA17 -  2
 	"D6",  // PA18 -  3
@@ -27,6 +29,46 @@ const char * channel_names[] = { // Channel names ** must ** match the board lab
 	"n/c"  // n/c  - 16
 };
 
+channel_status_t channel_status[] = { // Store the on or off status of the pins
+    CHAN_OFF, // Is there a better way to initialize this?
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+    CHAN_OFF,
+};
+
+trigger_setting_t trigger_setting[] = { // Store the trigger setting of the pins
+    TRIGGER_OFF, // Is there a better way to initialize this?
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+    TRIGGER_OFF,
+};
+
+uint32_t sample_rate=20000; // sampling rate (Hz)
+uint32_t samples=10000; // number of samples, set to 0 for continuous, if available
 
 
 /*

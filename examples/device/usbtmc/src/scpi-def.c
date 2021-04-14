@@ -43,6 +43,7 @@
 #include "bsp/board.h"
 
 #include "channels.h"
+#include "instrument_constants.h"
 
 static scpi_result_t DMM_MeasureVoltageDcQ(scpi_t * context) {
     scpi_number_t param1, param2;
@@ -346,14 +347,162 @@ static scpi_result_t TEST_Chanlst(scpi_t *context) {
 }
 
 
+
+// todo ** connect these functions to the chip hardware
+static bool tlf_channel_off(int32_t channel_index){
+    (void) channel_index;
+    return true;
+}
+static bool tlf_channel_on(int32_t channel_index){
+    (void) channel_index;
+    return true;
+}
+
+static bool tlf_trigger_set(int32_t channel_index, trigger_setting_t trigger_request) {
+    (void) channel_index;
+    (void) trigger_request;
+    return true;
+}
+
+scpi_choice_def_t trigger_choice[] = {
+    {"X", TRIGGER_OFF},
+    {"0", TRIGGER_ZERO},
+    {"1", TRIGGER_ONE},
+    {"R", TRIGGER_RISING},
+    {"F", TRIGGER_FALLING},
+    {"E", TRIGGER_EDGE},
+    SCPI_CHOICE_LIST_END /* termination of option list */
+};
+
+scpi_choice_def_t channel_choice[] = {
+    {"OFF", CHAN_OFF},
+    {"ON", CHAN_ON},
+    SCPI_CHOICE_LIST_END /* termination of option list */
+};
+
+static scpi_result_t CHAN_Set_Trigger(scpi_t * context) {
+
+    int32_t channel_number[1], channel_index;
+    int32_t trigger_request;
+    const char * trigger_state;
+
+    if (!SCPI_CommandNumbers(context, channel_number, 1, -1)) { // get the channel number
+        if (SCPI_ParamErrorOccurred(context)) { // error during processing of parameter
+        return SCPI_RES_ERR;
+        }
+    }
+
+    channel_index = channel_number[0] - 1; // offset the channel number by -1 to get the channel_index
+    if ( ( channel_index < 0 ) ||
+         (channel_index > (channel_count - 1) ) ) {
+        return SCPI_RES_ERR;
+    }
+
+    if (!SCPI_ParamChoice(context, trigger_choice, &trigger_request, TRUE)) { // get the trigger setting requested
+        return SCPI_RES_ERR;
+    }
+
+    if (trigger_setting[channel_index] != trigger_request) { // channel setting is changed
+        if (!tlf_trigger_set(channel_index, trigger_request)) {
+            return SCPI_RES_ERR;
+            }
+        trigger_setting[channel_index] = trigger_request;
+    }
+
+    SCPI_ChoiceToName(channel_choice, trigger_request, &trigger_state);
+    fprintf(stderr, "\tChannel=%ld set Trigger to (%s)\r\n", (long int) channel_number, trigger_state);
+
+    return SCPI_RES_OK;
+}
+
+static scpi_result_t CHAN_Get_Trigger(scpi_t * context) {
+    int32_t channel_number[1], channel_index;
+    const char * trigger_state;
+
+    if (!SCPI_CommandNumbers(context, channel_number, 1, -1)) { // get the channel number
+        if (SCPI_ParamErrorOccurred(context)) { // error during processing of parameter
+        return SCPI_RES_ERR;
+        }
+    }
+
+    channel_index = channel_number[0] - 1; // offset the channel number by -1 to get the channel_index
+    if ( ( channel_index < 0 ) ||
+         (channel_index > (channel_count - 1) ) ) {
+        return SCPI_RES_ERR;
+        }
+
+
+    if (!SCPI_ChoiceToName(trigger_choice, trigger_setting[channel_index], &trigger_state)) {
+        return SCPI_RES_ERR;
+    }
+
+    SCPI_ResultCharacters(context,
+                          trigger_state, // decode to the string
+                          strlen(trigger_state)
+                          );
+
+    fprintf(stderr, "\tChannel=%ld Trigger: %s\r\n", (long int) channel_number, trigger_state);
+
+    return SCPI_RES_OK;
+
+}
+
+//**** Debug tool to flash the LED a number of times
+
+// static void delay_time(float seconds){
+//     static volatile uint32_t start_time;
+
+//     start_time = board_millis();
+//     while (board_millis() < start_time + seconds * 1000) {
+
+//     }
+
+// }
+
+    // for(int j=0; j<trigger_option_count; j++){
+    //     // delay
+
+    //     delay_time(0.2);
+    //     board_led_write(0);
+    //     delay_time(0.2);
+    //     board_led_write(1);
+    // }
+
+static scpi_result_t TRIGGER_Options(scpi_t * context) {
+    int trigger_option_count; // number of trigger options
+    char buf[50]; // character buffer for output
+    int buf_len=0;
+    const char * return_buf;
+    const char * delimiter = ",";
+
+    trigger_option_count = sizeof(trigger_choice)/sizeof(trigger_choice[0]) - 1; // need -1 offset
+
+    for(int i=0; i < trigger_option_count; i++){  // loop through all the trigger options
+        if (!SCPI_ChoiceToName(trigger_choice, i, &return_buf)) {
+            return SCPI_RES_ERR;
+        }
+
+        if (i > 0) {
+            // add a delimeter to the string
+            strcpy(&buf[buf_len], delimiter);
+            buf_len += strlen(delimiter);
+        }
+        // copy return_buf string into buffer
+        strcpy(&buf[buf_len], return_buf);
+        buf_len += strlen(return_buf);
+    }
+
+    SCPI_ResultCharacters(context, buf, buf_len);
+
+    fprintf(stderr, "TRIGger:OPTIONS are %s\r\n", buf);
+
+    return SCPI_RES_OK;
+}
+
 // Return the number of channels from the board definition file
 static scpi_result_t CHAN_Count(scpi_t *context) {
-    // char bf[15];
-    // SCPI_NumberToStr(context, scpi_special_numbers_def, &channel_count, bf, 15);
-
 
     SCPI_ResultInt32(context, channel_count);
-    //board_led_write(1);
 
     fprintf(stderr, "CHANnel:COUNT is %ld\r\n", channel_count);
 
@@ -362,20 +511,124 @@ static scpi_result_t CHAN_Count(scpi_t *context) {
 }
 
 static scpi_result_t CHAN_Name(scpi_t * context) {
-    int32_t numbers[1], channel_index;
+    int32_t channel_number[1], channel_index;
 
-    SCPI_CommandNumbers(context, numbers, 1, -1);
-    channel_index = numbers[0] - 1;
-    board_led_write(0);
+    // the channel_number starts counting at 1
+    // channel_index is always the index into the channel array (starting at 0)
+
+    if (!SCPI_CommandNumbers(context, channel_number, 1, -1)) {
+        if (SCPI_ParamErrorOccurred(context)) { // error during processing of parameter
+        return SCPI_RES_ERR;
+        }
+    }
+
+    channel_index = channel_number[0] - 1; // offset the channel number by -1 to get the channel_index
+    //board_led_write(0);
     if ( ( channel_index < 0 ) ||
          (channel_index > (channel_count - 1) ) ) {
         return SCPI_RES_ERR;
         }
 
+    // send back the channel name for the channel number requested
     SCPI_ResultCharacters(context, channel_names[channel_index], strlen(channel_names[channel_index]));
 
     fprintf(stderr, "CHAN number: %ld, CHAN name: %s\r\n", channel_index + 1, channel_names[channel_index]);
 
+    return SCPI_RES_OK;
+}
+
+static scpi_result_t CHAN_Get_Status(scpi_t * context) {
+    int32_t channel_number[1], channel_index;
+    const char * channel_state;
+
+    if (!SCPI_CommandNumbers(context, channel_number, 1, -1)) { // get the channel number
+        if (SCPI_ParamErrorOccurred(context)) { // error during processing of parameter
+        return SCPI_RES_ERR;
+        }
+    }
+
+    channel_index = channel_number[0] - 1; // offset the channel number by -1 to get the channel_index
+    if ( ( channel_index < 0 ) ||
+         (channel_index > (channel_count - 1) ) ) {
+        return SCPI_RES_ERR;
+        }
+
+
+    if (!SCPI_ChoiceToName(channel_choice, channel_status[channel_index], &channel_state)) {
+        return SCPI_RES_ERR;
+    }
+
+    SCPI_ResultCharacters(context,
+                          channel_state, // decode to the string "OFF" or "ON"
+                          strlen(channel_state)
+                          );
+
+    fprintf(stderr, "\tChannel=%ld (%s)\r\n", (long int) channel_number, channel_state);
+
+    return SCPI_RES_OK;
+}
+
+static scpi_result_t CHAN_Set_Status(scpi_t * context) {
+
+    int32_t channel_number[1], channel_index;
+    int32_t channel_setting;
+    const char * channel_state;
+
+    // get the channel number
+    if (!SCPI_CommandNumbers(context, channel_number, 1, -1)) {
+        if (SCPI_ParamErrorOccurred(context)) { // error during processing of parameter
+        return SCPI_RES_ERR;
+        }
+    }
+
+    channel_index = channel_number[0] - 1; // offset the channel number by -1 to get the channel_index
+    if ( ( channel_index < 0 ) ||
+         (channel_index > (channel_count - 1) ) ) {
+        return SCPI_RES_ERR;
+    }
+
+    if (!SCPI_ParamChoice(context, channel_choice, &channel_setting, TRUE)) {
+        return SCPI_RES_ERR;
+    }
+
+    if (channel_status[channel_index] != channel_setting) { // channel setting is changed
+        if (channel_setting == CHAN_ON)  { // set channel on
+            if (!tlf_channel_on(channel_index))
+                return SCPI_RES_ERR;
+        }
+        if (channel_setting == CHAN_OFF) { // set channel off
+            if (!tlf_channel_off(channel_index)) {
+                return SCPI_RES_ERR;
+            }
+        }
+        channel_status[channel_index] = channel_setting;
+    }
+
+    SCPI_ChoiceToName(channel_choice, channel_setting, &channel_state);
+    fprintf(stderr, "\tChannel=%ld set to (%s)\r\n", (long int) channel_number, channel_state);
+
+    return SCPI_RES_OK;
+}
+
+
+static scpi_result_t SAMPLES_Set(scpi_t * context) { // set the number of samples
+
+    scpi_number_t param1;
+
+    /* read first parameter if present */
+    if (!SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, TRUE)) {
+        return SCPI_RES_ERR;
+    }
+    // convert `scpi_number_t param1` to `samples`
+    samples = param1.content.value;
+
+    fprintf(stderr, "# of samples=%ld\r\n", samples);
+    return SCPI_RES_OK;
+}
+
+static scpi_result_t SAMPLES_Get(scpi_t * context) { // Get the number of samples
+    SCPI_ResultUInt32(context, samples);
+    fprintf(stderr, "# of samples=%ld\r\n", samples);
     return SCPI_RES_OK;
 }
 
@@ -450,9 +703,30 @@ const scpi_command_t scpi_commands[] = {
     {.pattern = "TEST:ARBitrary?", .callback = TEST_ArbQ,},
     {.pattern = "TEST:CHANnellist", .callback = TEST_Chanlst,},
 
-    // Added by K Matocha 12 April 2021
+    // TinyLogicFriend command handling
     {.pattern = "CHANnel:COUNT?", .callback = CHAN_Count,},
     {.pattern = "CHANnel#:NAME?", .callback = CHAN_Name,},
+
+    // Set ON/OFF status of the channels
+    {.pattern = "CHANnel#:STATus", .callback = CHAN_Set_Status,},
+    {.pattern = "CHANnel#:STATus?", .callback = CHAN_Get_Status,},
+
+    // // Set/get trigger setting of a channel
+    {.pattern = "CHANnel#:TRIGger", .callback = CHAN_Set_Trigger,},
+    {.pattern = "CHANnel#:TRIGger?", .callback = CHAN_Get_Trigger,},
+    {.pattern = "TRIGger:OPTions?", .callback = TRIGGER_Options,},
+
+    // // Set/get sampling rate
+    // {.pattern = "RATE", .callback = RATE_Set,},
+    // {.pattern = "RATE?", .callback = RATE_Get,},
+    // {.pattern = "RATE:OPTions?", .callback = RATE_Options,},
+
+    // Set/get number of samples
+    {.pattern = "SAMPLes", .callback = SAMPLES_Set,},
+    {.pattern = "SAMPLes?", .callback = SAMPLES_Get,},
+
+
+
 
     SCPI_CMD_LIST_END
 };
