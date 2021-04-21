@@ -4,6 +4,15 @@
 
 #include "instrument_types.h"
 
+// // Need to move this into the board definition (out of scpi-def.h)
+// #define SCPI_IDN1 "AdafruitIndustries"
+// #define SCPI_IDN2 "TinyLogicFriend"
+// #define SCPI_IDN3 "21-04"
+// #define SCPI_IDN4 "ItsyBitsyM4"
+
+
+//static const char idn[] = "AdafruitIndustries,TinyLogicFriend-ItsyBitsyM4,SN0001,FirmwareVer123456\r\n";
+
 // Taken from Feather M4 Express
 //  NEEDS update for ItsyBitsy  *******
 //
@@ -67,9 +76,12 @@ trigger_setting_t trigger_setting[] = { // Store the trigger setting of the pins
     TRIGGER_OFF,
 };
 
-uint32_t sample_rate=20000; // sampling rate (Hz)
-uint32_t samples=10000; // number of samples, set to 0 for continuous, if available
+uint32_t sample_rate_min = 1;  // minimum sampling rate (Hz)
+uint32_t sample_rate_max = 20000000;  // maximum sampling rate (Hz)
+uint32_t sample_rate_step = 1; // step size beteween minimum and maximum sampling rate, usually 1 Hz (Hz)
+uint32_t sample_rate = 20000; // sampling rate (Hz)
 
+uint32_t samples = 10000; // number of samples to measure, set to 0 for continuous, if available
 
 /*
 // From Feather M4 express - @tannewt's original TinyLogicFriend

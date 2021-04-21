@@ -31,6 +31,7 @@
 #include "tusb.h"
 #include "usbtmc_app.h"
 #include "scpi_parser.h"
+#include "logic_capture.h"
 
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
@@ -66,6 +67,8 @@ int main(void)
   // led_state = 1 - led_state; // toggle
 
   scpi_init();
+
+  logic_capture_init();
 
   while (1)
   {
@@ -116,6 +119,31 @@ void tud_resume_cb(void)
 {
   blink_interval_ms = BLINK_MOUNTED;
 }
+
+
+
+//--------------------------------------------------------------------+
+// TinyLogicFriend communication
+//--------------------------------------------------------------------+
+
+void tlf_queue_sample(uint8_t* sample, uint32_t sample_len) {
+
+    // this sends one measurement packet at a time.  This is totally inefficient
+    // it should use a buffer and then only transmit with the third
+    // argument (endOfMessage) when the buffer is full
+    //
+    // Is there enough time to check for full buffer and send?
+    //
+    // TODO ** clean this up
+    tud_usbtmc_transmit_dev_msg_data(sample, sample_len, true, false);
+
+    //tud_cdc_write(sample, sample_len);
+
+    // if (sent == 0) {
+    //   asm("bkpt");
+    // }
+}
+
 
 //--------------------------------------------------------------------+
 // BLINKING TASK + Indicator pulse

@@ -140,14 +140,14 @@ bool tud_usbtmc_msgBulkOut_start_cb(usbtmc_msg_request_dev_dep_out const * msgHe
 }
 
 void set_parse_query(uint32_t setting){
+  // used to trigger a BulkIn send when a message response is complete
   parseQuery=setting;
 }
 
 bool copy_to_buffer(const char *data, size_t len)
 {
-  // (void) data;
-  // (void) len;
-  // const char * dummy_text[]={"dummy"};
+
+  //* todo * check for buffer overrun
 
   memcpy(&(buffer_in[buffer_inlen]), data, len);
   buffer_inlen += len;
@@ -161,7 +161,7 @@ bool copy_to_buffer(const char *data, size_t len)
 
 bool tud_usbtmc_msg_data_cb(void *data, size_t len, bool transfer_complete)
 {
-  (void) transfer_complete;
+  //(void) transfer_complete;
 
   // If transfer isn't finished, we just ignore it (for now)
 

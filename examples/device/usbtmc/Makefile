@@ -6,10 +6,12 @@ INC += \
 	src \
 	$(TOP)/hw \
 	$(TOP)/lib/libscpi/inc \
-	$(TOP)/lib/libscpi/src
+	$(TOP)/lib/libscpi/src \
+	$(TOP)/src/mcu/microchip/samd
 
 # Example source
-EXAMPLE_SOURCE += $(wildcard src/*.c)
+EXAMPLE_SOURCE += $(wildcard src/*.c) $(wildcard src/mcu/$(VENDOR)/$(CHIP_FAMILY)/*.c)
+
 SRC_C += $(addprefix $(CURRENT_PATH)/, $(EXAMPLE_SOURCE))
 
 include ../../rules.mk
