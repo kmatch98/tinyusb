@@ -308,10 +308,10 @@ void usbtmc_app_task_iter(void) {
       else
       {
         // echo the command back to the host
-        buffer_tx_ix = tu_min32(buffer_outlen,msgReqLen);
-        tud_usbtmc_transmit_dev_msg_data(buffer_out, buffer_tx_ix, buffer_tx_ix == buffer_outlen, false);
-        queryState = 0;
-        bulkInStarted = 0;
+        // buffer_tx_ix = tu_min32(buffer_outlen,msgReqLen);
+        // tud_usbtmc_transmit_dev_msg_data(buffer_out, buffer_tx_ix, buffer_tx_ix == buffer_outlen, false);
+        // queryState = 0;
+        // bulkInStarted = 0;
       }
       // MAV is cleared in the transfer complete callback.
     }

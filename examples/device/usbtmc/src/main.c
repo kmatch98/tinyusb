@@ -126,6 +126,41 @@ void tud_resume_cb(void)
 // TinyLogicFriend communication
 //--------------------------------------------------------------------+
 
+static const uint32_t tlf_data_buffer_length=64;
+static uint8_t tlf_data_buffer[64];
+static uint32_t tlf_data_buffer_count=0;
+
+// static uint32_t counter=0;
+
+void tlf_queue_data(uint16_t value, uint32_t timestamp) {
+
+    // store timestamp as 16 bit
+    tlf_data_buffer[tlf_data_buffer_count]   = (uint16_t) timestamp;
+    tlf_data_buffer[tlf_data_buffer_count+2] = (uint16_t) value;
+    tlf_data_buffer_count += 4;
+
+    if (tlf_data_buffer_count > tlf_data_buffer_length - 4) {
+      // tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, (counter > 5), false);  // this is a way to end the transmission
+      tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, false, false);
+      tlf_data_buffer_count=0;
+      // counter += 1;
+    }
+
+    // // trial with 32 bit timestamp
+    // tlf_data_buffer[tlf_data_buffer_count]   = timestamp;
+    // tlf_data_buffer[tlf_data_buffer_count+4] = (uint16_t) value;
+    // tlf_data_buffer_count += 6;
+
+    // if (tlf_data_buffer_count > tlf_data_buffer_length - 6) {
+    //   // tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, (counter > 5), false);  // this is a way to end the transmission
+    //   tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, false, false);
+    //   tlf_data_buffer_count=0;
+    //   // counter += 1;
+    // }
+
+}
+
+
 void tlf_queue_sample(uint8_t* sample, uint32_t sample_len) {
 
     // this sends one measurement packet at a time.  This is totally inefficient
@@ -135,7 +170,15 @@ void tlf_queue_sample(uint8_t* sample, uint32_t sample_len) {
     // Is there enough time to check for full buffer and send?
     //
     // TODO ** clean this up
-    tud_usbtmc_transmit_dev_msg_data(sample, sample_len, true, false);
+
+    tud_usbtmc_transmit_dev_msg_data(sample, sample_len, false, false);
+
+    // (void) sample;
+    // (void) sample_len;
+
+    // char test[]="test";
+    // tud_usbtmc_transmit_dev_msg_data(test, 4, false, false);
+
 
     //tud_cdc_write(sample, sample_len);
 

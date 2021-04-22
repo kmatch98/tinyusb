@@ -688,7 +688,7 @@ static scpi_result_t SAMPLES_Get(scpi_t * context) { // Get the number of sample
 // start the acquisition
 static scpi_result_t RUN_Execute(scpi_t * context) {
     (void) context;
-    board_led_write(0);
+
     logic_capture_start(); // call the board specific function
     return SCPI_RES_OK;
 }
@@ -798,7 +798,6 @@ const scpi_command_t scpi_commands[] = {
     // Action settings
     {.pattern = "RUN", .callback = RUN_Execute,},
     {.pattern = "STOP", .callback = STOP_Execute,},
-
 
     SCPI_CMD_LIST_END
 };
