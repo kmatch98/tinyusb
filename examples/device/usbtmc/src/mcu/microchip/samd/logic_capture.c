@@ -12,11 +12,23 @@ void EIC_Handler(void) {
     uint16_t value = EIC->PINSTATE.reg;
     EIC->INTFLAG.reg = 0xffff;
     TC0->COUNT16.CTRLBSET.reg = TC_CTRLBSET_CMD_READSYNC;
-    while (TC0->COUNT16.SYNCBUSY.bit.COUNT != 0) {
+
+
+    while (TC0->COUNT16.SYNCBUSY.bit.COUNT != 0) { // from tannewt's code
         // Wait for the count to be synced.
     }
+
+
+    // while (TC0->COUNT16.SYNCBUSY.reg & 0x0004) {
+    //     // Wait for the count to be synced.
+    // }
+
     uint32_t timestamp = TC0->COUNT16.COUNT.reg;
-    TC0->COUNT16.COUNT.reg = 0;
+    // TC0->COUNT16.COUNT.reg = 0; // <--- result is always zero if this line is used
+
+    tlf_queue_data(value, timestamp);
+}
+
 
     // timestamp=01;
     // value=02;
@@ -29,8 +41,6 @@ void EIC_Handler(void) {
 
     //tlf_queue_sample(sample, 4);
 
-    tlf_queue_data(value, timestamp);
-}
 
 void EIC_0_Handler(void) { EIC_Handler(); }
 void EIC_1_Handler(void) { EIC_Handler(); }
@@ -100,8 +110,7 @@ void logic_capture_start(void) {
     EIC->CTRLA.bit.ENABLE = true;
 
     // Use TC0 to timestamp the pin change.
-    TC0->COUNT16.CTRLA.reg = TC_CTRLA_MODE_COUNT16 |
-                             TC_CTRLA_ENABLE;
+    TC0->COUNT16.CTRLA.reg = TC_CTRLA_MODE_COUNT16 | TC_CTRLA_ENABLE;
 
     TC0->COUNT16.INTENSET.reg = TC_INTFLAG_OVF;
     TC0->COUNT16.COUNT.reg = 0;
@@ -112,9 +121,9 @@ void logic_capture_start(void) {
     //tlf_queue_sample((uint8_t*) &value, 2);
 
     // send initial value with zero timestamp
-    tlf_queue_data(0, value);
+    tlf_queue_data(value, (uint32_t) 0);
 
-    board_led_write(0); // * for debug
+    // board_led_write(0); // * for debug
 
     NVIC_EnableIRQ(TC0_IRQn);
     for (uint32_t eic_irq = EIC_0_IRQn; eic_irq <= EIC_15_IRQn; eic_irq++) {

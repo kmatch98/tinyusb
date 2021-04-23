@@ -130,14 +130,50 @@ static const uint32_t tlf_data_buffer_length=64;
 static uint8_t tlf_data_buffer[64];
 static uint32_t tlf_data_buffer_count=0;
 
-// static uint32_t counter=0;
+static uint32_t counter=0;
+
 
 void tlf_queue_data(uint16_t value, uint32_t timestamp) {
 
+    // value=73;
+
+    if ( (counter == 0) && (timestamp == 0) ){
+      board_led_write(0); // * for debug
+    }
+    counter += 1;
+
+    // timestamp=0x0000FFFE;
+
+    // // initialize the array with zeroes.
+    // if (tlf_data_buffer_count == 0) {
+    //   for(int j=0; j < 64; j++) {
+    //     tlf_data_buffer[j] = 0;
+    //   }
+    // }
+
     // store timestamp as 16 bit
-    tlf_data_buffer[tlf_data_buffer_count]   = (uint16_t) timestamp;
-    tlf_data_buffer[tlf_data_buffer_count+2] = (uint16_t) value;
+    // tlf_data_buffer[tlf_data_buffer_count]   = (uint16_t) timestamp;
+    // tlf_data_buffer[tlf_data_buffer_count+2] = (uint16_t) value;
+    // memcpy(&tlf_data_buffer[tlf_data_buffer_count], (char *) (&timestamp)[2], 2);
+
+    // timestamp = 0x0FEE;
+    // value = 0xF0FF;
+    memcpy(&tlf_data_buffer[tlf_data_buffer_count], (uint16_t *) (&timestamp), 2);
+    memcpy(&tlf_data_buffer[tlf_data_buffer_count+2], &value, 2);
+
     tlf_data_buffer_count += 4;
+
+    // if (tlf_data_buffer_count > tlf_data_buffer_length - 4) {
+    //   // tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, (counter > 5), false);  // this is a way to end the transmission
+    //   tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, false, false);
+    //   tlf_data_buffer_count=0;
+    //   // counter += 1;
+    // }
+
+    // // trial with 32 bit timestamp
+    // tlf_data_buffer[tlf_data_buffer_count]   = (uint32_t) timestamp;
+    // tlf_data_buffer[tlf_data_buffer_count+4] = (uint16_t) value;
+    // tlf_data_buffer_count += 6;
 
     if (tlf_data_buffer_count > tlf_data_buffer_length - 4) {
       // tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, (counter > 5), false);  // this is a way to end the transmission
@@ -145,18 +181,6 @@ void tlf_queue_data(uint16_t value, uint32_t timestamp) {
       tlf_data_buffer_count=0;
       // counter += 1;
     }
-
-    // // trial with 32 bit timestamp
-    // tlf_data_buffer[tlf_data_buffer_count]   = timestamp;
-    // tlf_data_buffer[tlf_data_buffer_count+4] = (uint16_t) value;
-    // tlf_data_buffer_count += 6;
-
-    // if (tlf_data_buffer_count > tlf_data_buffer_length - 6) {
-    //   // tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, (counter > 5), false);  // this is a way to end the transmission
-    //   tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, false, false);
-    //   tlf_data_buffer_count=0;
-    //   // counter += 1;
-    // }
 
 }
 
