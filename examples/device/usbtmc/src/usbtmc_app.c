@@ -88,12 +88,17 @@ static volatile uint32_t idnQuery;
 static volatile uint32_t luvQuery;
 static volatile uint32_t parseQuery = 0;
 
-static uint32_t resp_delay = 125u; // Adjustable delay, to allow for better testing
+//static uint32_t resp_delay = 125u; // Adjustable delay, to allow for better testing
+static uint32_t resp_delay = 1u; // Adjustable delay, to allow for better testing
 static size_t buffer_outlen = 0;
 static size_t buffer_inlen  = 0;
 static size_t buffer_tx_ix; // for transmitting using multiple transfers
-static uint8_t buffer_in[225]; // Return packets: A few packets long should be enough.
 static uint8_t buffer_out[225]; // Receive packets: A few packets long should be enough.
+//static uint8_t buffer_in[225]; // Return packets: A few packets long should be enough.
+static uint8_t buffer_in[4096]; // Return packets: A few packets long should be enough.
+
+
+
 
 static usbtmc_msg_dev_dep_msg_in_header_t rspMsg = {
     .bmTransferAttributes =

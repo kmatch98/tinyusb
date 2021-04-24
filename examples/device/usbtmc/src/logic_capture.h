@@ -30,8 +30,11 @@ void logic_capture_start(void);
 void logic_capture_stop(void);
 void logic_capture_task(void);
 
-void tlf_queue_data(uint16_t value, uint32_t timestamp);
-void tlf_queue_sample(uint8_t* sample, uint32_t sample_len);
+// // //void tlf_queue_data(uint16_t value, uint32_t timestamp);
+// void tlf_queue_data(uint16_t value, uint16_t timestamp);
+void tlf_queue_data(uint16_t *data);
+
+//void tlf_queue_sample(uint8_t* sample, uint32_t sample_len);
 
 
 

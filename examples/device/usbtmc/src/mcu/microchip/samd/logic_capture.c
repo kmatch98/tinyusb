@@ -6,7 +6,7 @@
 #include "sam.h"
 #include "bsp/board.h"
 
-uint8_t sample[8];
+uint16_t sample[2];
 
 void EIC_Handler(void) {
     uint16_t value = EIC->PINSTATE.reg;
@@ -14,32 +14,28 @@ void EIC_Handler(void) {
     TC0->COUNT16.CTRLBSET.reg = TC_CTRLBSET_CMD_READSYNC;
 
 
-    while (TC0->COUNT16.SYNCBUSY.bit.COUNT != 0) { // from tannewt's code
-        // Wait for the count to be synced.
-    }
-
-
-    // while (TC0->COUNT16.SYNCBUSY.reg & 0x0004) {
+    // while (TC0->COUNT16.SYNCBUSY.bit.COUNT != 0) { // from tannewt's code
     //     // Wait for the count to be synced.
     // }
+
+    while (TC0->COUNT16.SYNCBUSY.reg & 0x0004) {
+        // Wait for the count to be synced.
+    }
 
     uint32_t timestamp = TC0->COUNT16.COUNT.reg;
     // TC0->COUNT16.COUNT.reg = 0; // <--- result is always zero if this line is used
 
-    tlf_queue_data(value, timestamp);
-}
-
-
-    // timestamp=01;
-    // value=02;
+    // tlf_queue_data(value, (uint16_t) timestamp);
 
     // memcpy(sample, &timestamp+2, 2);
     // memcpy(sample+2, &value, 2);
 
-    // ((uint16_t*) sample)[0] = timestamp;
-    // ((uint16_t*) sample)[1] = value;
+    ((uint16_t*) sample)[0] = timestamp;
+    ((uint16_t*) sample)[1] = value;
 
     //tlf_queue_sample(sample, 4);
+    tlf_queue_data(sample);
+}
 
 
 void EIC_0_Handler(void) { EIC_Handler(); }
@@ -70,10 +66,11 @@ void TC0_Handler(void) {
 
     // memcpy(sample, &timestamp, 2);
     // memcpy(sample+2, &value, 2);
-    // ((uint16_t*) sample)[0] = timestamp;
-    // ((uint16_t*) sample)[1] = value;
+    ((uint16_t*) sample)[0] = timestamp;
+    ((uint16_t*) sample)[1] = value;
     //tlf_queue_sample(sample, 4);
-    tlf_queue_data(value, timestamp);
+    //tlf_queue_data(value, timestamp);
+    tlf_queue_data(sample);
 }
 
 
@@ -120,10 +117,19 @@ void logic_capture_start(void) {
     // ** Why do we send any information here?  Just for an initial value?
     //tlf_queue_sample((uint8_t*) &value, 2);
 
-    // send initial value with zero timestamp
-    tlf_queue_data(value, (uint32_t) 0);
+    ((uint16_t*) sample)[0] = 0;
+    ((uint16_t*) sample)[1] = value;
 
-    // board_led_write(0); // * for debug
+    // memcpy(sample, &timestamp+2, 2);
+    // memcpy(sample+2, &value, 2);
+
+    //tlf_queue_sample(sample, 4);
+    tlf_queue_data(sample);
+
+    // send initial value with zero timestamp
+    //tlf_queue_data(value, (uint16_t) 0);
+
+    //board_led_write(0); // * for debug
 
     NVIC_EnableIRQ(TC0_IRQn);
     for (uint32_t eic_irq = EIC_0_IRQn; eic_irq <= EIC_15_IRQn; eic_irq++) {

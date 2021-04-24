@@ -33,6 +33,20 @@
 #include "scpi_parser.h"
 #include "logic_capture.h"
 
+
+#define TLF_USBTMC_TX_BUFSIZE 6400
+#define TLF_DATA_BUFFER_LENGTH 16
+
+  // FIFO buffer for TinyLogicFriend's USBTMC class // modified from cdc_device.c
+  tu_fifo_t tlf_tx_ff;
+
+  uint16_t tlf_tx_ff_buf[TLF_USBTMC_TX_BUFSIZE];
+
+#if CFG_FIFO_MUTEX
+  osal_mutex_def_t tlf_tx_ff_mutex;
+#endif
+
+
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
 //--------------------------------------------------------------------+
@@ -51,6 +65,9 @@ enum  {
 static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 
 void led_blinking_task(void);
+void tlf_fifo_task(void);
+void tlf_fifo_init(void);
+void tlf_send_buffer(void);
 
 /*------------- MAIN -------------*/
 int main(void)
@@ -68,6 +85,8 @@ int main(void)
 
   scpi_init();
 
+  tlf_fifo_init(); // create the buffer
+
   logic_capture_init();
 
   while (1)
@@ -75,6 +94,7 @@ int main(void)
     tud_task(); // tinyusb device task
     // led_blinking_task();
     usbtmc_app_task_iter();
+    tlf_fifo_task();
 
     // // Blink every interval ms
     // if ( (board_millis() - start_ms) > blink_interval_ms) { // time has elapsed
@@ -126,90 +146,119 @@ void tud_resume_cb(void)
 // TinyLogicFriend communication
 //--------------------------------------------------------------------+
 
-static const uint32_t tlf_data_buffer_length=64;
-static uint8_t tlf_data_buffer[64];
-static uint32_t tlf_data_buffer_count=0;
 
-static uint32_t counter=0;
+static uint16_t tlf_output_buffer[TLF_DATA_BUFFER_LENGTH]; // todo ** verify the size of the elements in the buffer
+// static uint32_t tlf_data_buffer_count=0;
+static uint16_t tlf_output_buffer2[TLF_DATA_BUFFER_LENGTH];
+static uint16_t tlf_output_buffer3[TLF_DATA_BUFFER_LENGTH];
 
+void tlf_fifo_task(void) {
+  // if buffer is > TLF_TRIGGER_TRANSMIT_LENGTH then send a packet from the buffer
+  if (tu_fifo_count(&tlf_tx_ff) >= TLF_DATA_BUFFER_LENGTH) {
+  //if (tu_fifo_count(&tlf_tx_ff) >= TLF_USBTMC_TX_BUFSIZE) {
+      tlf_send_buffer();
+  }
+}
 
-void tlf_queue_data(uint16_t value, uint32_t timestamp) {
+void tlf_fifo_init(void) {
+  // currently setup for uint16_t size (2 bytes)
+  tu_fifo_config(&tlf_tx_ff, tlf_tx_ff_buf, TU_ARRAY_SIZE(tlf_tx_ff_buf), 2, false); // not overwritable
 
-    // value=73;
+#if CFG_FIFO_MUTEX
+  tu_fifo_config_mutex(&tlf_tx_ff, osal_mutex_create(tlf_tx_ff_mutex));
+#endif
+}
 
-    if ( (counter == 0) && (timestamp == 0) ){
-      board_led_write(0); // * for debug
-    }
-    counter += 1;
+uint16_t send_count=0;
 
-    // timestamp=0x0000FFFE;
+void tlf_send_buffer(void) {
+  // see cdc_device.c:  tud_cdc_n_write_flush()
 
-    // // initialize the array with zeroes.
-    // if (tlf_data_buffer_count == 0) {
-    //   for(int j=0; j < 64; j++) {
-    //     tlf_data_buffer[j] = 0;
-    //   }
-    // }
+  // board_led_write(0); // * for debug
+  // Pull data from FIFO
+  uint16_t const count = tu_fifo_read_n(&tlf_tx_ff, tlf_output_buffer, TLF_DATA_BUFFER_LENGTH);
+  memcpy(tlf_output_buffer2, tlf_output_buffer, count*2);
+  memcpy(tlf_output_buffer3, tlf_output_buffer, count*2);
 
-    // store timestamp as 16 bit
-    // tlf_data_buffer[tlf_data_buffer_count]   = (uint16_t) timestamp;
-    // tlf_data_buffer[tlf_data_buffer_count+2] = (uint16_t) value;
-    // memcpy(&tlf_data_buffer[tlf_data_buffer_count], (char *) (&timestamp)[2], 2);
-
-    // timestamp = 0x0FEE;
-    // value = 0xF0FF;
-    memcpy(&tlf_data_buffer[tlf_data_buffer_count], (uint16_t *) (&timestamp), 2);
-    memcpy(&tlf_data_buffer[tlf_data_buffer_count+2], &value, 2);
-
-    tlf_data_buffer_count += 4;
-
-    // if (tlf_data_buffer_count > tlf_data_buffer_length - 4) {
-    //   // tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, (counter > 5), false);  // this is a way to end the transmission
-    //   tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, false, false);
-    //   tlf_data_buffer_count=0;
-    //   // counter += 1;
-    // }
-
-    // // trial with 32 bit timestamp
-    // tlf_data_buffer[tlf_data_buffer_count]   = (uint32_t) timestamp;
-    // tlf_data_buffer[tlf_data_buffer_count+4] = (uint16_t) value;
-    // tlf_data_buffer_count += 6;
-
-    if (tlf_data_buffer_count > tlf_data_buffer_length - 4) {
-      // tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, (counter > 5), false);  // this is a way to end the transmission
-      tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, false, false);
-      tlf_data_buffer_count=0;
-      // counter += 1;
-    }
+  tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer, count*2, false, false); // correct count for the size of the uint16_t, in bytes
+  tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer2, count*2, false, false); // correct count for the size of the uint16_t, in bytes
+  tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer3, count*2, false, false); // correct count for the size of the uint16_t, in bytes
+  send_count += 1;
 
 }
 
+// // modified to use tu_fifo_t data type FIFO buffer
+// void tlf_queue_data(uint16_t value, uint16_t timestamp) {
+//   //board_led_write(0); // * for debug
 
-void tlf_queue_sample(uint8_t* sample, uint32_t sample_len) {
+//   tu_fifo_write(&tlf_tx_ff, &value);
+//   tu_fifo_write(&tlf_tx_ff, &timestamp);
 
-    // this sends one measurement packet at a time.  This is totally inefficient
-    // it should use a buffer and then only transmit with the third
-    // argument (endOfMessage) when the buffer is full
-    //
-    // Is there enough time to check for full buffer and send?
-    //
-    // TODO ** clean this up
+// }
 
-    tud_usbtmc_transmit_dev_msg_data(sample, sample_len, false, false);
+uint16_t queue_count=0;
 
-    // (void) sample;
-    // (void) sample_len;
+void tlf_queue_data(uint16_t *data) {
 
-    // char test[]="test";
-    // tud_usbtmc_transmit_dev_msg_data(test, 4, false, false);
+  data[0]=queue_count;
+  queue_count += 1;
 
+  // data[1]=tu_fifo_count(&tlf_tx_ff);
+  data[1]=send_count;
 
-    //tud_cdc_write(sample, sample_len);
-
-    // if (sent == 0) {
-    //   asm("bkpt");
-    // }
+  if (!tu_fifo_overflowed(&tlf_tx_ff) > 0) {
+    tu_fifo_write_n(&tlf_tx_ff, data, 2);
+  } else {
+    board_led_write(0);
+  }
 }
+
+
+
+
+
+// //////**** obsolete
+// void tlf_queue_data(uint16_t value, uint32_t timestamp) {
+
+//     memcpy(&tlf_data_buffer[tlf_data_buffer_count], (uint16_t *) (&timestamp), 2);
+//     memcpy(&tlf_data_buffer[tlf_data_buffer_count+2], &value, 2);
+
+//     tlf_data_buffer_count += 4;
+
+//     // move this to a separate task in the loop  -> need a fifo buffer.
+//     if (tlf_data_buffer_count > TLF_TRIGGER_TRANSMIT_LENGTH) {
+//       // tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, (counter > 5), false);  // this is a way to end the transmission
+//       tud_usbtmc_transmit_dev_msg_data(tlf_data_buffer, tlf_data_buffer_count, false, false);
+//       tlf_data_buffer_count=0;
+//     }
+
+// }
+
+// void tlf_queue_sample(uint8_t* sample, uint32_t sample_len) {
+
+//     // this sends one measurement packet at a time.  This is totally inefficient
+//     // it should use a buffer and then only transmit with the third
+//     // argument (endOfMessage) when the buffer is full
+//     //
+//     // Is there enough time to check for full buffer and send?
+//     //
+//     // TODO ** clean this up
+
+//     tud_usbtmc_transmit_dev_msg_data(sample, sample_len, false, false);
+
+//     // (void) sample;
+//     // (void) sample_len;
+
+//     // char test[]="test";
+//     // tud_usbtmc_transmit_dev_msg_data(test, 4, false, false);
+
+
+//     //tud_cdc_write(sample, sample_len);
+
+//     // if (sent == 0) {
+//     //   asm("bkpt");
+//     // }
+// }
 
 
 //--------------------------------------------------------------------+
