@@ -2,6 +2,7 @@
  * The MIT License (MIT)
  *
  * Copyright (c) 2019 Ha Thach (tinyusb.org)
+ * Copyright (c) 2021 Kevin Matocha
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,15 +28,17 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "main.h"
 #include "bsp/board.h"
 #include "tusb.h"
 #include "usbtmc_app.h"
 #include "scpi_parser.h"
 #include "logic_capture.h"
+#include "channels.h"
 
 
-#define TLF_USBTMC_TX_BUFSIZE 6400
-#define TLF_DATA_BUFFER_LENGTH 16
+#define TLF_USBTMC_TX_BUFSIZE 5000
+#define TLF_DATA_BUFFER_LENGTH 512
 
   // FIFO buffer for TinyLogicFriend's USBTMC class // modified from cdc_device.c
   tu_fifo_t tlf_tx_ff;
@@ -64,10 +67,7 @@ enum  {
 
 static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 
-void led_blinking_task(void);
-void tlf_fifo_task(void);
-void tlf_fifo_init(void);
-void tlf_send_buffer(void);
+static char EOM_message[]="\0";
 
 /*------------- MAIN -------------*/
 int main(void)
@@ -149,15 +149,18 @@ void tud_resume_cb(void)
 
 static uint16_t tlf_output_buffer[TLF_DATA_BUFFER_LENGTH]; // todo ** verify the size of the elements in the buffer
 // static uint32_t tlf_data_buffer_count=0;
-static uint16_t tlf_output_buffer2[TLF_DATA_BUFFER_LENGTH];
-static uint16_t tlf_output_buffer3[TLF_DATA_BUFFER_LENGTH];
 
 void tlf_fifo_task(void) {
   // if buffer is > TLF_TRIGGER_TRANSMIT_LENGTH then send a packet from the buffer
-  if (tu_fifo_count(&tlf_tx_ff) >= TLF_DATA_BUFFER_LENGTH) {
+  if ( (data_requested) &&
+       (tu_fifo_count(&tlf_tx_ff) >= TLF_DATA_BUFFER_LENGTH) ) {
   //if (tu_fifo_count(&tlf_tx_ff) >= TLF_USBTMC_TX_BUFSIZE) {
       tlf_send_buffer();
+      data_requested = 0;
   }
+
+  // //board_led_write(0); // * for debug
+  // tlf_send_buffer();
 }
 
 void tlf_fifo_init(void) {
@@ -169,47 +172,50 @@ void tlf_fifo_init(void) {
 #endif
 }
 
-uint16_t send_count=0;
 
-void tlf_send_buffer(void) {
+uint16_t send_count=0; // for debug
+
+void tlf_send_buffer(void) { // send a packet of data on BulkIn to the hsot
   // see cdc_device.c:  tud_cdc_n_write_flush()
 
   // board_led_write(0); // * for debug
+
   // Pull data from FIFO
+
+  //board_led_write(0);
   uint16_t const count = tu_fifo_read_n(&tlf_tx_ff, tlf_output_buffer, TLF_DATA_BUFFER_LENGTH);
-  memcpy(tlf_output_buffer2, tlf_output_buffer, count*2);
-  memcpy(tlf_output_buffer3, tlf_output_buffer, count*2);
+  if (count == 0) {
+    tud_usbtmc_transmit_dev_msg_data(EOM_message, 1, true, false); // no data to send send End Of Message signal
+  } else {
+    tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer, count*2, false, false); // correct count for the size of the uint16_t, in bytes
+    board_led_write(0);
+  }
 
-  tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer, count*2, false, false); // correct count for the size of the uint16_t, in bytes
-  tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer2, count*2, false, false); // correct count for the size of the uint16_t, in bytes
-  tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer3, count*2, false, false); // correct count for the size of the uint16_t, in bytes
-  send_count += 1;
-
+  send_count += 1; // for debug
 }
 
-// // modified to use tu_fifo_t data type FIFO buffer
-// void tlf_queue_data(uint16_t value, uint16_t timestamp) {
-//   //board_led_write(0); // * for debug
 
-//   tu_fifo_write(&tlf_tx_ff, &value);
-//   tu_fifo_write(&tlf_tx_ff, &timestamp);
 
-// }
 
-uint16_t queue_count=0;
+uint16_t queue_count=0; // for debug
 
-void tlf_queue_data(uint16_t *data) {
 
-  data[0]=queue_count;
-  queue_count += 1;
+void tlf_queue_data(uint16_t *data) { // add data to the output FIFO queue
 
-  // data[1]=tu_fifo_count(&tlf_tx_ff);
-  data[1]=send_count;
+  // data[0]=queue_count;
+  // queue_count += 1;
 
-  if (!tu_fifo_overflowed(&tlf_tx_ff) > 0) {
-    tu_fifo_write_n(&tlf_tx_ff, data, 2);
-  } else {
-    board_led_write(0);
+  // // data[1]=tu_fifo_count(&tlf_tx_ff);
+  // data[1]=send_count;
+
+  if ( (!tu_fifo_overflowed(&tlf_tx_ff) > 0) ||
+       (measure_count > samples) ) {
+
+    tu_fifo_write_n(&tlf_tx_ff, data, 2); // add the (timestamp, value) to the measurement FIFO output queue
+    measure_count += 1; // add another count
+  } else { // *** overflow! ***
+    //board_led_write(0);
+    logic_capture_stop();
   }
 }
 

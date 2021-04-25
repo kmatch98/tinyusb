@@ -46,6 +46,8 @@
 #include "instrument_constants.h"
 #include "logic_capture.h"
 
+bool data_requested;
+
 
 // static scpi_result_t DMM_MeasureVoltageDcQ(scpi_t * context) {
 //     scpi_number_t param1, param2;
@@ -685,11 +687,24 @@ static scpi_result_t SAMPLES_Get(scpi_t * context) { // Get the number of sample
     return SCPI_RES_OK;
 }
 
+
+// send a data packet
+static scpi_result_t DATA_Request(scpi_t * context) {
+    (void) context;
+    //board_led_write(0); // * for debug
+    data_requested = true; // set flag for `usbtmc_app_task_iter` to send a data packet
+    return SCPI_RES_OK;
+}
+
 // start the acquisition
 static scpi_result_t RUN_Execute(scpi_t * context) {
     (void) context;
-    //board_led_write(0); // * for debug
+    // board_led_write(0); // * for debug
+
+    measure_count = 0; // reset the measurement counter
+
     logic_capture_start(); // call the board specific function
+
     return SCPI_RES_OK;
 }
 
@@ -698,8 +713,10 @@ static scpi_result_t STOP_Execute(scpi_t * context) {
     (void) context;
 
     logic_capture_stop(); // call the board specific function
+
     return SCPI_RES_OK;
 }
+
 
 /**
  * Reimplement IEEE488.2 *TST?
@@ -798,6 +815,7 @@ const scpi_command_t scpi_commands[] = {
     // Action settings
     {.pattern = "RUN", .callback = RUN_Execute,},
     {.pattern = "STOP", .callback = STOP_Execute,},
+    {.pattern = "DATA?", .callback = DATA_Request,},
 
     SCPI_CMD_LIST_END
 };

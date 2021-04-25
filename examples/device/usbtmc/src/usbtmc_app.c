@@ -31,6 +31,8 @@
 
 #include "scpi/parser.h"
 #include "scpi-def.h"
+#include "channels.h"
+#include "logic_capture.h"
 
 #if (CFG_TUD_USBTMC_ENABLE_488)
 static usbtmc_response_capabilities_488_t const
@@ -97,8 +99,11 @@ static uint8_t buffer_out[225]; // Receive packets: A few packets long should be
 //static uint8_t buffer_in[225]; // Return packets: A few packets long should be enough.
 static uint8_t buffer_in[4096]; // Return packets: A few packets long should be enough.
 
+//uint32_t samples=0; // Number of samples to be measured
+uint32_t measure_count=0; // number of samples that were measured
 
-
+// running = false;
+// data_requested = false;
 
 static usbtmc_msg_dev_dep_msg_in_header_t rspMsg = {
     .bmTransferAttributes =
@@ -265,6 +270,20 @@ bool tud_usbtmc_msgBulkIn_request_cb(usbtmc_msg_request_dev_dep_in const * reque
 }
 
 void usbtmc_app_task_iter(void) {
+
+  // if (data_requested) { // send data to host
+  //   //tud_usbtmc_transmit_dev_msg_data(luvu2, tu_min32(sizeof(luvu2)-1,msgReqLen),true,false);
+  //   tlf_fifo_task();
+  //   board_led_write(0);
+  //   data_requested = false;
+  // }
+
+  // if (running) {
+  //   if (measure_count > samples) {  // completed all the measurements
+  //     logic_capture_stop();
+  //   }
+  // }
+
   switch(queryState) {
   case 0:
     break;
@@ -286,6 +305,8 @@ void usbtmc_app_task_iter(void) {
     }
     break;
   case 4: // time to transmit;
+
+
     if(bulkInStarted && (buffer_tx_ix == 0)) {
       // if(idnQuery)
       // {
