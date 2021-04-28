@@ -120,6 +120,7 @@ void logic_capture_init(void) {
 
 void logic_capture_start(void) {
 
+    send_buffer_counter = 0; // clear counter for number of samples sent
     measure_count = 0; // reset the measurement counter
     running = true;
     finished = false;

@@ -44,6 +44,8 @@
 uint16_t data_requested, data_send_complete;
 uint16_t send_buffer_counter=0;
 
+int packets_sent=0;
+
 uint16_t tlf_output_buffer[TLF_DATA_BUFFER_LENGTH*4]; // todo ** verify the size of the elements in the buffer
 
 
@@ -74,7 +76,7 @@ enum  {
 
 static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 
-// static const char EOM_message[]="\0";
+static const char EOM_message[]="\0";
 
 /*------------- MAIN -------------*/
 int main(void)
@@ -159,7 +161,6 @@ int tlf_fifo_task(void) {
 
   if ( (data_requested > 0) &&
        (data_send_complete < 1) ) {
-      // board_led_write(0);
 
       tlf_send_buffer();
       data_requested = 0;
@@ -189,46 +190,14 @@ void tlf_fifo_init(void) {
 // #endif
 }
 
-int send_count=0;
+int send_buffer_times_called=0;
 
-void tlf_send_buffer(void) { // send a packet of data on BulkIn to the hsot
-  // see cdc_device.c:  tud_cdc_n_write_flush()
+void tlf_send_buffer(void) { // send a packet of data on BulkIn to the host
 
-  // board_led_write(0); // * for debug
-
-  // Pull data from FIFO
-
-  //board_led_write(0);
-  // uint16_t const count = tu_fifo_read_n(&tlf_tx_ff, tlf_output_buffer, TLF_DATA_BUFFER_LENGTH);
-  // if (count <= 0) {
-  //   tud_usbtmc_transmit_dev_msg_data(EOM_message, 1, true, false); // no data to send send End Of Message signal
-  // } else {
-  //   tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer, count*2, false, false); // correct count for the size of the uint16_t, in bytes
-  //   finished = false;
-  //   if (send_count > 0) {
-
-  //   }
-
-  // }
-
-
+  send_buffer_times_called++;
 
   uint16_t j=0; // loop counter for putting measurement data into output buffer
   uint16_t values_to_send = 0;
-
-  // values_to_send = 0;
-
-  // for(j=0; j < TLF_DATA_BUFFER_LENGTH; j++){
-
-  //     tlf_output_buffer[2 * j]     = timestamps[send_buffer_counter];
-  //     tlf_output_buffer[2 * j + 1] = values[send_buffer_counter];
-  // }
-
-
-    // for(j=send_buffer_counter; ((j < samples) && (j < send_buffer_counter + TLF_DATA_BUFFER_LENGTH)); j++){
-    //   tlf_output_buffer[2 * j]     = timestamps[send_buffer_counter];
-    //   tlf_output_buffer[2 * j + 1] = values[send_buffer_counter];
-    // }
 
   for (j=0; j < TLF_DATA_BUFFER_LENGTH; j++) {
 
@@ -239,29 +208,41 @@ void tlf_send_buffer(void) { // send a packet of data on BulkIn to the hsot
     }
   }
 
-  uint16_t test_buffer[] = {0, 2, 3, 4};
+  // uint16_t test_buffer[] = {0, 2, 110, 0, 150, 2, 200, 0};
+
+  // tud_usbtmc_transmit_dev_msg_data(test_buffer, 16, false, false);
 
   if (send_buffer_counter < samples) {
 
-    //tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer, j*4, false, false); // correct count for the size of the uint16_t, in bytes
+    // tud_usbtmc_transmit_dev_msg_data(test_buffer, 16, false, false); // correct count for the size of the uint16_t, in bytes
 
-    if ( tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer, values_to_send*4, true, false) ) { // correct count for the size of the uint16_t, in bytes
+    if ( tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer, values_to_send*4, false, false) ) { // correct count for the size of the uint16_t, in bytes
       // board_led_write(0);
     }
     send_buffer_counter += values_to_send;
-    // board_led_write(0);
-    send_count++;
+
+    if (packets_sent == 1) {
+      // board_led_write(0);
+    }
+
+    packets_sent++;
+
 
   } else {
-    if ( tud_usbtmc_transmit_dev_msg_data(test_buffer, 8, true, false) ) {
+    if ( tud_usbtmc_transmit_dev_msg_data(EOM_message, 0, true, false) ) {
       // board_led_write(0);
       data_send_complete = 1;
     } // no data to send. Send End Of Message signal
 
   }
   if (send_buffer_counter > 12) {
+    //board_led_write(0);
+  }
+
+  if (send_buffer_times_called == 2) {
     board_led_write(0);
   }
+
 
 }
 

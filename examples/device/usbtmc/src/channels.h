@@ -16,6 +16,7 @@ extern uint32_t samples; // Number of samples to be measured
 // for flow control with measurements
 extern bool running;
 extern uint16_t data_requested;
+extern uint16_t send_buffer_counter;
 extern bool finished;
 
 

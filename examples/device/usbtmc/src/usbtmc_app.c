@@ -285,12 +285,14 @@ void usbtmc_app_task_iter(void) {
   //   }
   // }
 
-  if (running) {
+  if (running) { // measurement loop is running, ignore all inputs for now
+                 // todo - accept the STOP command
     return;
   }
 
   switch(queryState) {
   case 0:
+
     break;
   case 1:
     queryDelayStart = board_millis();
@@ -310,11 +312,10 @@ void usbtmc_app_task_iter(void) {
     }
     break;
   case 4: // time to transmit;
-
     if ( tlf_fifo_task() ) {
+      // queryState=0;
       break;
     }
-
     if(bulkInStarted && (buffer_tx_ix == 0)) {
       // if(idnQuery)
       // {
