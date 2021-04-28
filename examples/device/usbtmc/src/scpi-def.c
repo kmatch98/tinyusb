@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "main.h"
 #include "../lib/libscpi/inc/scpi/scpi.h"
 #include "scpi-def.h"
 #include "bsp/board.h"
@@ -45,9 +46,6 @@
 #include "channels.h"
 #include "instrument_constants.h"
 #include "logic_capture.h"
-
-bool data_requested;
-
 
 // static scpi_result_t DMM_MeasureVoltageDcQ(scpi_t * context) {
 //     scpi_number_t param1, param2;
@@ -676,6 +674,10 @@ static scpi_result_t SAMPLES_Set(scpi_t * context) { // set the number of sample
     // convert `scpi_number_t param1` to `samples`
     samples = param1.content.value;
 
+    if (samples > MEASURE_BUFFER_SIZE) { // constrain number of samples to the size o the buffer
+        samples = MEASURE_BUFFER_SIZE;
+    }
+
     fprintf(stderr, "# of samples=%ld\r\n", samples);
     return SCPI_RES_OK;
 }
@@ -691,8 +693,9 @@ static scpi_result_t SAMPLES_Get(scpi_t * context) { // Get the number of sample
 // send a data packet
 static scpi_result_t DATA_Request(scpi_t * context) {
     (void) context;
-    //board_led_write(0); // * for debug
-    data_requested = true; // set flag for `usbtmc_app_task_iter` to send a data packet
+
+    // board_led_write(0); // * for debug
+    flag_data_requested(); // set flag for `usbtmc_app_task_iter` to send a data packet
     return SCPI_RES_OK;
 }
 
@@ -700,8 +703,6 @@ static scpi_result_t DATA_Request(scpi_t * context) {
 static scpi_result_t RUN_Execute(scpi_t * context) {
     (void) context;
     // board_led_write(0); // * for debug
-
-    measure_count = 0; // reset the measurement counter
 
     logic_capture_start(); // call the board specific function
 

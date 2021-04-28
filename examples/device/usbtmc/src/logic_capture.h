@@ -25,6 +25,8 @@
 
 #include <stdint.h>
 
+
+
 void logic_capture_init(void);
 void logic_capture_start(void);
 void logic_capture_stop(void);
@@ -36,6 +38,7 @@ void tlf_queue_data(uint16_t *data);
 
 //void tlf_queue_sample(uint8_t* sample, uint32_t sample_len);
 
+extern uint16_t measure_count; // number of samples that were measured
 
 
 typedef struct _capture_channel {
@@ -45,3 +48,9 @@ typedef struct _capture_channel {
 } capture_channel_t;
 
 extern capture_channel_t channel_list[];
+
+#define MEASURE_BUFFER_SIZE 35000
+extern uint16_t timestamps[];
+extern uint16_t values[];
+
+extern uint16_t send_buffer_counter;

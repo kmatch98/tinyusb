@@ -77,9 +77,9 @@ trigger_setting_t trigger_setting[] = { // Store the trigger setting of the pins
 };
 
 uint32_t sample_rate_min = 1;  // minimum sampling rate (Hz)
-uint32_t sample_rate_max = 20000000;  // maximum sampling rate (Hz)
+uint32_t sample_rate_max = 48000000;  // maximum sampling rate (Hz)
 uint32_t sample_rate_step = 1; // step size beteween minimum and maximum sampling rate, usually 1 Hz (Hz)
-uint32_t sample_rate = 20000; // sampling rate (Hz)
+uint32_t sample_rate = 48000000; // sampling rate (Hz) starting point
 
 uint32_t samples = 10000; // number of samples to measure, set to 0 for continuous, if available
 

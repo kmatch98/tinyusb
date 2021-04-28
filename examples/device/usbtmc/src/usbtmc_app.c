@@ -34,6 +34,7 @@
 #include "channels.h"
 #include "logic_capture.h"
 
+
 #if (CFG_TUD_USBTMC_ENABLE_488)
 static usbtmc_response_capabilities_488_t const
 #else
@@ -100,7 +101,7 @@ static uint8_t buffer_out[225]; // Receive packets: A few packets long should be
 static uint8_t buffer_in[4096]; // Return packets: A few packets long should be enough.
 
 //uint32_t samples=0; // Number of samples to be measured
-uint32_t measure_count=0; // number of samples that were measured
+
 
 // running = false;
 // data_requested = false;
@@ -274,7 +275,7 @@ void usbtmc_app_task_iter(void) {
   // if (data_requested) { // send data to host
   //   //tud_usbtmc_transmit_dev_msg_data(luvu2, tu_min32(sizeof(luvu2)-1,msgReqLen),true,false);
   //   tlf_fifo_task();
-  //   board_led_write(0);
+  //   // board_led_write(0);
   //   data_requested = false;
   // }
 
@@ -283,6 +284,10 @@ void usbtmc_app_task_iter(void) {
   //     logic_capture_stop();
   //   }
   // }
+
+  if (running) {
+    return;
+  }
 
   switch(queryState) {
   case 0:
@@ -306,6 +311,9 @@ void usbtmc_app_task_iter(void) {
     break;
   case 4: // time to transmit;
 
+    if ( tlf_fifo_task() ) {
+      break;
+    }
 
     if(bulkInStarted && (buffer_tx_ix == 0)) {
       // if(idnQuery)

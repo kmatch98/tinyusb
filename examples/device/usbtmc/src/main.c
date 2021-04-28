@@ -38,7 +38,14 @@
 
 
 #define TLF_USBTMC_TX_BUFSIZE 5000
-#define TLF_DATA_BUFFER_LENGTH 512
+#define TLF_DATA_BUFFER_LENGTH 12
+
+
+uint16_t data_requested, data_send_complete;
+uint16_t send_buffer_counter=0;
+
+uint16_t tlf_output_buffer[TLF_DATA_BUFFER_LENGTH*4]; // todo ** verify the size of the elements in the buffer
+
 
   // FIFO buffer for TinyLogicFriend's USBTMC class // modified from cdc_device.c
   tu_fifo_t tlf_tx_ff;
@@ -67,7 +74,7 @@ enum  {
 
 static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 
-static char EOM_message[]="\0";
+// static const char EOM_message[]="\0";
 
 /*------------- MAIN -------------*/
 int main(void)
@@ -78,7 +85,6 @@ int main(void)
 
   board_init();
   tusb_init();
-
 
   board_led_write(led_state);
   // led_state = 1 - led_state; // toggle
@@ -94,7 +100,7 @@ int main(void)
     tud_task(); // tinyusb device task
     // led_blinking_task();
     usbtmc_app_task_iter();
-    tlf_fifo_task();
+    //tlf_fifo_task();
 
     // // Blink every interval ms
     // if ( (board_millis() - start_ms) > blink_interval_ms) { // time has elapsed
@@ -147,33 +153,43 @@ void tud_resume_cb(void)
 //--------------------------------------------------------------------+
 
 
-static uint16_t tlf_output_buffer[TLF_DATA_BUFFER_LENGTH]; // todo ** verify the size of the elements in the buffer
 // static uint32_t tlf_data_buffer_count=0;
 
-void tlf_fifo_task(void) {
-  // if buffer is > TLF_TRIGGER_TRANSMIT_LENGTH then send a packet from the buffer
-  if ( (data_requested) &&
-       (tu_fifo_count(&tlf_tx_ff) >= TLF_DATA_BUFFER_LENGTH) ) {
-  //if (tu_fifo_count(&tlf_tx_ff) >= TLF_USBTMC_TX_BUFSIZE) {
+int tlf_fifo_task(void) {
+
+  if ( (data_requested > 0) &&
+       (data_send_complete < 1) ) {
+      // board_led_write(0);
+
       tlf_send_buffer();
       data_requested = 0;
+      return 1;
+      // board_led_write(0);
   }
 
-  // //board_led_write(0); // * for debug
-  // tlf_send_buffer();
+  return 0;
+}
+
+void flag_reset_send_buffer_counter(void){
+  send_buffer_counter = 0;
+}
+
+void flag_data_requested(void) {
+  //board_led_write(0);
+  data_requested = 1;
+  data_send_complete = 0;
 }
 
 void tlf_fifo_init(void) {
-  // currently setup for uint16_t size (2 bytes)
-  tu_fifo_config(&tlf_tx_ff, tlf_tx_ff_buf, TU_ARRAY_SIZE(tlf_tx_ff_buf), 2, false); // not overwritable
+//   // currently setup for uint16_t size (2 bytes)
+//   tu_fifo_config(&tlf_tx_ff, tlf_tx_ff_buf, TU_ARRAY_SIZE(tlf_tx_ff_buf), 2, false); // not overwritable
 
-#if CFG_FIFO_MUTEX
-  tu_fifo_config_mutex(&tlf_tx_ff, osal_mutex_create(tlf_tx_ff_mutex));
-#endif
+// #if CFG_FIFO_MUTEX
+//   tu_fifo_config_mutex(&tlf_tx_ff, osal_mutex_create(tlf_tx_ff_mutex));
+// #endif
 }
 
-
-uint16_t send_count=0; // for debug
+int send_count=0;
 
 void tlf_send_buffer(void) { // send a packet of data on BulkIn to the hsot
   // see cdc_device.c:  tud_cdc_n_write_flush()
@@ -183,18 +199,71 @@ void tlf_send_buffer(void) { // send a packet of data on BulkIn to the hsot
   // Pull data from FIFO
 
   //board_led_write(0);
-  uint16_t const count = tu_fifo_read_n(&tlf_tx_ff, tlf_output_buffer, TLF_DATA_BUFFER_LENGTH);
-  if (count == 0) {
-    tud_usbtmc_transmit_dev_msg_data(EOM_message, 1, true, false); // no data to send send End Of Message signal
+  // uint16_t const count = tu_fifo_read_n(&tlf_tx_ff, tlf_output_buffer, TLF_DATA_BUFFER_LENGTH);
+  // if (count <= 0) {
+  //   tud_usbtmc_transmit_dev_msg_data(EOM_message, 1, true, false); // no data to send send End Of Message signal
+  // } else {
+  //   tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer, count*2, false, false); // correct count for the size of the uint16_t, in bytes
+  //   finished = false;
+  //   if (send_count > 0) {
+
+  //   }
+
+  // }
+
+
+
+  uint16_t j=0; // loop counter for putting measurement data into output buffer
+  uint16_t values_to_send = 0;
+
+  // values_to_send = 0;
+
+  // for(j=0; j < TLF_DATA_BUFFER_LENGTH; j++){
+
+  //     tlf_output_buffer[2 * j]     = timestamps[send_buffer_counter];
+  //     tlf_output_buffer[2 * j + 1] = values[send_buffer_counter];
+  // }
+
+
+    // for(j=send_buffer_counter; ((j < samples) && (j < send_buffer_counter + TLF_DATA_BUFFER_LENGTH)); j++){
+    //   tlf_output_buffer[2 * j]     = timestamps[send_buffer_counter];
+    //   tlf_output_buffer[2 * j + 1] = values[send_buffer_counter];
+    // }
+
+  for (j=0; j < TLF_DATA_BUFFER_LENGTH; j++) {
+
+    if (send_buffer_counter + j < samples) {
+      tlf_output_buffer[2 * j]     = timestamps[send_buffer_counter + j];
+      tlf_output_buffer[2 * j + 1] = values[send_buffer_counter + j];
+      values_to_send += 1;
+    }
+  }
+
+  uint16_t test_buffer[] = {0, 2, 3, 4};
+
+  if (send_buffer_counter < samples) {
+
+    //tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer, j*4, false, false); // correct count for the size of the uint16_t, in bytes
+
+    if ( tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer, values_to_send*4, true, false) ) { // correct count for the size of the uint16_t, in bytes
+      // board_led_write(0);
+    }
+    send_buffer_counter += values_to_send;
+    // board_led_write(0);
+    send_count++;
+
   } else {
-    tud_usbtmc_transmit_dev_msg_data(tlf_output_buffer, count*2, false, false); // correct count for the size of the uint16_t, in bytes
+    if ( tud_usbtmc_transmit_dev_msg_data(test_buffer, 8, true, false) ) {
+      // board_led_write(0);
+      data_send_complete = 1;
+    } // no data to send. Send End Of Message signal
+
+  }
+  if (send_buffer_counter > 12) {
     board_led_write(0);
   }
 
-  send_count += 1; // for debug
 }
-
-
 
 
 uint16_t queue_count=0; // for debug
@@ -208,14 +277,16 @@ void tlf_queue_data(uint16_t *data) { // add data to the output FIFO queue
   // // data[1]=tu_fifo_count(&tlf_tx_ff);
   // data[1]=send_count;
 
-  if ( (!tu_fifo_overflowed(&tlf_tx_ff) > 0) ||
-       (measure_count > samples) ) {
+  if ( (!tu_fifo_overflowed(&tlf_tx_ff) > 0) &&
+       (measure_count < samples) ) {
 
     tu_fifo_write_n(&tlf_tx_ff, data, 2); // add the (timestamp, value) to the measurement FIFO output queue
     measure_count += 1; // add another count
+    // board_led_write(0);
   } else { // *** overflow! ***
-    //board_led_write(0);
+
     logic_capture_stop();
+
   }
 }
 
