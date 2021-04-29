@@ -20,14 +20,14 @@
 const int32_t channel_count = 16; // Total number of channels
 
 const char * channel_names[] = { // Channel names **must** match the board labels
-	"D5",  // PA16 -  1
-	"SCK", // PA17 -  2
-	"D6",  // PA18 -  3
-	"D9",  // PA19 -  4
+	"RX",  // PA16 -  1  verified  // are these the correct board names?
+	"TX",  // PA17 -  2  verified
+	"D7",  // PA18 -  3  verified
+	"D9",  // PA19 -  4  verified
 	"A4",  // PA04 -  5
 	"A1",  // PA05 -  6
 	"A5",  // PA06 -  7
-	"MOSI",// PB23 -  8
+	"MISO",// PB23 -  8
 	"A2",  // PB08 -  9
 	"A3",  // PB09 - 10
 	"n/c", // n/c  - 11

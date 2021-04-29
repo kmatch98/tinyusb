@@ -328,7 +328,6 @@ void usbtmc_app_task_iter(void) {
         tud_usbtmc_transmit_dev_msg_data(luvu2, tu_min32(sizeof(luvu2)-1,msgReqLen),true,false);
         queryState = 0;
         bulkInStarted = 0;
-        //board_led_write(1);
       }
       else if(parseQuery && (buffer_inlen > 0) ){
         //board_led_write(0);
@@ -339,6 +338,7 @@ void usbtmc_app_task_iter(void) {
         bulkInStarted = 0;
         parseQuery = 0;
         buffer_inlen = 0;
+        board_led_write(0);
       }
       else
       {

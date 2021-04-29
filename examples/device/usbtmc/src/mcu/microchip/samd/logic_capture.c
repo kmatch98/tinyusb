@@ -17,9 +17,13 @@ uint16_t measure_count=0; // number of samples that were measured
 bool running = false;
 bool finished = false;
 
+
+// // Tell linker to store these functions in RAM // didn't seem to have any impact
+// #define RAMFUNC __attribute__((section(".ramfunc")))
+// void EIC_Handler(void) RAMFUNC;
+// void TC0_Handler(void) RAMFUNC;
+
 void EIC_Handler(void) {
-
-
 
     EIC->INTFLAG.reg = 0xffff;
     uint16_t const value = EIC->PINSTATE.reg;
@@ -141,12 +145,25 @@ void logic_capture_start(void) {
                                   PORT_WRCONFIG_WRPMUX |
                                   PORT_WRCONFIG_PMUX(0) |
                                   PORT_WRCONFIG_PMUXEN |
-                                  0x0002;
+                                  // 0x0002;
+                                  // 0x0003; // try with pins PA16 and PA17
+                                  0x000F; // try with 16 pins (?)  which pins?
+
+    // for PA00 to PA15
+    PORT->Group[0].WRCONFIG.reg = PORT_WRCONFIG_WRPINCFG |
+                                  PORT_WRCONFIG_WRPMUX |
+                                  PORT_WRCONFIG_PMUX(1) | // does this setup a different MUX?
+                                  PORT_WRCONFIG_PMUXEN |
+                                  // 0x0002;
+                                  // 0x0003; // try with pins PA16 and PA17
+                                  0x000F; // try with 16 pins (?)  which pins?
+
 
     EIC->ASYNCH.reg = 0xff;
     EIC->CONFIG[0].reg = 0x33333333;
     EIC->CONFIG[1].reg = 0x33333333;
-    EIC->INTENSET.reg = 0x0002;
+    // EIC->INTENSET.reg = 0x0002;
+    EIC->INTENSET.reg = 0x0003;  // try with pins PA16 and PA17 as interrupts
     EIC->DEBOUNCEN.reg = 0xffff;
     // EIC->DEBOUNCEN.reg = 0x0002;
 
