@@ -43,6 +43,7 @@ else
   include $(TOP)/$(FAMILY_PATH)/family.mk
 
   SRC_C += $(subst $(TOP)/,,$(wildcard $(TOP)/$(FAMILY_PATH)/*.c))
+
 endif
 
 # Fetch submodules depended by family
@@ -73,6 +74,7 @@ endif
 #-------------- Source files and compiler flags --------------
 
 # Include all source C in family & board folder
+
 SRC_C += hw/bsp/board.c
 SRC_C += $(subst $(TOP)/,,$(wildcard $(TOP)/$(BOARD_PATH)/*.c))
 

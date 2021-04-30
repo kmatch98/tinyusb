@@ -10,8 +10,10 @@ INC += \
 	$(TOP)/src/mcu/microchip/samd
 
 # Example source
-EXAMPLE_SOURCE += $(wildcard src/*.c) $(wildcard src/mcu/$(VENDOR)/$(CHIP_FAMILY)/*.c)
+# EXAMPLE_SOURCE += $(wildcard src/*.c) $(wildcard src/mcu/$(VENDOR)/$(CHIP_FAMILY)/*.c)
 
-SRC_C += $(addprefix $(CURRENT_PATH)/, $(EXAMPLE_SOURCE))
+# SRC_C += $(addprefix $(CURRENT_PATH)/src/, $(EXAMPLE_SOURCE))
+
+$(info SRC_C Makefile: $(SRC_C) )
 
 include ../../rules.mk

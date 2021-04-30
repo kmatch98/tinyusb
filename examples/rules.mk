@@ -19,6 +19,19 @@ ifneq ($(BOARD), spresense)
 LIBS += -lc
 endif
 
+# # Main code
+# SRC_C += \
+# 	src/usbtmc_app.c \
+# 	src/main.c \
+# 	src/instrument_constants.c \
+# 	src/itsybitsy_m4.c \
+# 	src/scpi-def.c \
+# 	src/scpi_parser.c \
+# 	src/usb_descriptors.c
+# 	# 	src/logic_capture.c \
+
+
+
 # TinyUSB Stack source
 SRC_C += \
 	src/tusb.c \
@@ -36,17 +49,17 @@ SRC_C += \
 	src/class/vendor/vendor_device.c
 
 
-# SCPI-parser
-SRC_C += \
-	lib/libscpi/src/error.c \
-	lib/libscpi/src/expression.c \
-	lib/libscpi/src/fifo.c \
-	lib/libscpi/src/ieee488.c \
-	lib/libscpi/src/lexer.c \
-	lib/libscpi/src/minimal.c \
-	lib/libscpi/src/parser.c \
-	lib/libscpi/src/units.c \
-	lib/libscpi/src/utils.c
+# # SCPI-parser
+# SRC_C += \
+# 	lib/libscpi/src/error.c \
+# 	lib/libscpi/src/expression.c \
+# 	lib/libscpi/src/fifo.c \
+# 	lib/libscpi/src/ieee488.c \
+# 	lib/libscpi/src/lexer.c \
+# 	lib/libscpi/src/minimal.c \
+# 	lib/libscpi/src/parser.c \
+# 	lib/libscpi/src/units.c \
+# 	lib/libscpi/src/utils.c
 
 
 # TinyUSB stack include
