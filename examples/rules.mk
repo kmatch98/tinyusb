@@ -66,7 +66,8 @@ SRC_C += \
 INC += $(TOP)/src
 
 #CFLAGS += $(addprefix -I,$(INC))
-CFLAGS += -Wno-float-equal -Wno-double-promotion -Wno-maybe-uninitialized $(addprefix -I,$(INC))
+# CFLAGS += -Wno-float-equal -Wno-double-promotion -Wno-maybe-uninitialized $(addprefix -I,$(INC))
+CFLAGS += -Wno-float-equal -Wno-double-promotion -Wno-maybe-uninitialized -Wno-unused-parameter $(addprefix -I,$(INC))
 
 LDFLAGS += $(CFLAGS) -fshort-enums -Wl,-T,$(TOP)/$(LD_FILE) -Wl,-Map=$@.map -Wl,-cref -Wl,-gc-sections#, -L/Users/margaret/Github/tinyusb/examples/device/usbtmc/lib/libscpi/obj/shared -L/Users/margaret/Github/tinyusb/examples/device/usbtmc/lib/libscpi/obj/static
 ifneq ($(SKIP_NANOLIB), 1)
